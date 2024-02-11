@@ -121,7 +121,7 @@ func renderResult(stdout io.Writer, opts renderOptions, data lokiapi.QueryRespon
 						containerColors = map[string]string{}
 					}
 					if _, ok := containerColors[container]; !ok {
-						colorName := names[len(containerColors)%len(names)]
+						colorName := names[len(containerColors)%len(names)+1]
 						containerColors[container] = colors[colorName]
 					}
 				}
