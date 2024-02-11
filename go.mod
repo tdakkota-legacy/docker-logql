@@ -12,6 +12,7 @@ require (
 	github.com/go-faster/jx v1.1.0
 	github.com/go-logfmt/logfmt v0.6.0
 	github.com/google/uuid v1.6.0
+	github.com/mattn/go-isatty v0.0.20
 	github.com/ogen-go/ogen v0.81.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/common v0.46.0
@@ -62,7 +63,6 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/miekg/pkcs11 v1.0.2 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.1-0.20220423185008-bf980b35cac4 // indirect
