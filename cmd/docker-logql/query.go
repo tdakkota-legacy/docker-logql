@@ -3,11 +3,13 @@ package main
 import (
 	"cmp"
 	"io"
+	"os"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/docker/cli/cli/command"
+	"github.com/mattn/go-isatty"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -85,11 +87,16 @@ func queryCmd(dcli command.Cli) *cobra.Command {
 type renderOptions struct {
 	timestamp bool
 	container bool
+	color     bool
 }
 
 func (opts *renderOptions) Register(set *pflag.FlagSet) {
 	set.BoolVarP(&opts.timestamp, "timestamp", "t", true, "Show timestamps")
 	set.BoolVarP(&opts.container, "container", "c", true, "Show container name")
+	disableColor := os.Getenv("NO_COLOR") != "" ||
+		os.Getenv("TERM") == "dumb" ||
+		(!isatty.IsTerminal(os.Stdout.Fd()) && !isatty.IsCygwinTerminal(os.Stdout.Fd()))
+	set.BoolVar(&opts.color, "color", !disableColor, "Enable color")
 }
 
 type entry struct {
@@ -100,14 +107,27 @@ type entry struct {
 func renderResult(stdout io.Writer, opts renderOptions, data lokiapi.QueryResponseData) error {
 	switch t := data.Type; t {
 	case lokiapi.StreamsResultQueryResponseData:
-		var entries []entry
+		var (
+			entries         []entry
+			containerColors map[string]string
+		)
 
 		for _, stream := range data.StreamsResult.Result {
 			labels := stream.Stream.Value
 			for _, e := range stream.Values {
+				container := labels["container"]
+				if opts.color {
+					if containerColors == nil {
+						containerColors = map[string]string{}
+					}
+					if _, ok := containerColors[container]; !ok {
+						colorName := names[len(containerColors)%len(names)]
+						containerColors[container] = colors[colorName]
+					}
+				}
 				entries = append(entries, entry{
 					LogEntry:  e,
-					container: labels["container"],
+					container: container,
 				})
 			}
 		}
@@ -120,12 +140,25 @@ func renderResult(stdout io.Writer, opts renderOptions, data lokiapi.QueryRespon
 			buf = buf[:0]
 
 			if opts.container {
+				if opts.color {
+					color := containerColors[entry.container]
+					buf = append(buf, color...)
+				}
 				buf = append(buf, entry.container...)
+				if opts.color {
+					buf = append(buf, resetColor...)
+				}
 				buf = append(buf, ' ')
 			}
 			if opts.timestamp {
 				ts := time.Unix(0, int64(entry.T))
+				if opts.color {
+					buf = append(buf, colors["blue"]...)
+				}
 				buf = ts.AppendFormat(buf, time.RFC3339Nano)
+				if opts.color {
+					buf = append(buf, resetColor...)
+				}
 				buf = append(buf, ' ')
 			}
 			msg := strings.TrimRight(entry.V, "\r\n")
