@@ -2,7 +2,6 @@ package main
 
 import (
 	"cmp"
-	"fmt"
 	"io"
 	"slices"
 	"strings"
@@ -11,6 +10,7 @@ import (
 	"github.com/docker/cli/cli/command"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
 	"github.com/tdakkota/docker-logql/internal/dockerlog"
@@ -25,6 +25,8 @@ func queryCmd(dcli command.Cli) *cobra.Command {
 		since = apiFlagFor[lokiapi.OptPrometheusDuration]()
 		step  = apiFlagFor[lokiapi.OptPrometheusDuration]()
 		limit int
+
+		render renderOptions
 	)
 	cmd := &cobra.Command{
 		Use:  "query <logql>",
@@ -68,7 +70,7 @@ func queryCmd(dcli command.Cli) *cobra.Command {
 			if err != nil {
 				return errors.Wrap(err, "eval")
 			}
-			return renderResult(cmd.OutOrStdout(), true, data)
+			return renderResult(cmd.OutOrStdout(), render, data)
 		},
 	}
 	cmd.Flags().Var(&start, "start", "Start of query range")
@@ -76,31 +78,62 @@ func queryCmd(dcli command.Cli) *cobra.Command {
 	cmd.Flags().Var(&since, "since", "A duration used to calculate `start` relative to `end`")
 	cmd.Flags().Var(&step, "step", "Query resolution step")
 	cmd.Flags().IntVar(&limit, "limit", -1, "Limit result")
+	render.Register(cmd.Flags())
 	return cmd
 }
 
-func renderResult(stdout io.Writer, printTimestamp bool, data lokiapi.QueryResponseData) error {
+type renderOptions struct {
+	timestamp bool
+	container bool
+}
+
+func (opts *renderOptions) Register(set *pflag.FlagSet) {
+	set.BoolVarP(&opts.timestamp, "timestamp", "t", true, "Show timestamps")
+	set.BoolVarP(&opts.container, "container", "c", true, "Show container name")
+}
+
+type entry struct {
+	lokiapi.LogEntry
+	container string
+}
+
+func renderResult(stdout io.Writer, opts renderOptions, data lokiapi.QueryResponseData) error {
 	switch t := data.Type; t {
 	case lokiapi.StreamsResultQueryResponseData:
-		var entries []lokiapi.LogEntry
+		var entries []entry
 
 		for _, stream := range data.StreamsResult.Result {
-			entries = append(entries, stream.Values...)
+			labels := stream.Stream.Value
+			for _, e := range stream.Values {
+				entries = append(entries, entry{
+					LogEntry:  e,
+					container: labels["container"],
+				})
+			}
 		}
-		slices.SortFunc(entries, func(a, b lokiapi.LogEntry) int {
+		slices.SortFunc(entries, func(a, b entry) int {
 			return cmp.Compare(a.T, b.T)
 		})
 
+		var buf []byte
 		for _, entry := range entries {
+			buf = buf[:0]
+
+			if opts.container {
+				buf = append(buf, entry.container...)
+				buf = append(buf, ' ')
+			}
+			if opts.timestamp {
+				ts := time.Unix(0, int64(entry.T))
+				buf = ts.AppendFormat(buf, time.RFC3339Nano)
+				buf = append(buf, ' ')
+			}
 			msg := strings.TrimRight(entry.V, "\r\n")
-			if printTimestamp {
-				if _, err := fmt.Fprintf(stdout, "%s %s\n", time.Unix(0, int64(entry.T)), msg); err != nil {
-					return err
-				}
-			} else {
-				if _, err := fmt.Fprintf(stdout, "%s\n", msg); err != nil {
-					return err
-				}
+			buf = append(buf, msg...)
+			buf = append(buf, "\n"...)
+
+			if _, err := stdout.Write(buf); err != nil {
+				return err
 			}
 		}
 
