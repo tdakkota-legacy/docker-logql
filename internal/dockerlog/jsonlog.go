@@ -32,7 +32,7 @@ type jsonIter struct {
 	resource otelstorage.Attrs
 }
 
-var _ iterators.Iterator[logstorage.Record] = (*jsonIter)(nil)
+var _ logiter = (*jsonIter)(nil)
 
 // Next returns true, if there is element and fills t.
 func (i *jsonIter) Next(r *logstorage.Record) (ok bool) {
