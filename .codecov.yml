@@ -1,0 +1,6 @@
+ignore:
+  - "**/main.go"
+coverage:
+  status:
+    project: false
+    patch: false
