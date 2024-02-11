@@ -2,6 +2,8 @@ package dockerlog
 
 import (
 	"context"
+	"strconv"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -48,7 +50,7 @@ func (q *Querier) SelectLogs(ctx context.Context, start, end otelstorage.Timesta
 
 	n := 0
 	for _, ctr := range containers {
-		if matchContainer(ctr, start, end, params) {
+		if matchContainer(ctr, params) {
 			containers[n] = ctr
 			n++
 		}
@@ -60,25 +62,46 @@ func (q *Querier) SelectLogs(ctx context.Context, start, end otelstorage.Timesta
 	if len(containers) != 1 {
 		return nil, errors.New("FIXME: merge logs from multiple containers")
 	}
+	ctr := containers[0]
 
-	ctr, err := q.client.ContainerInspect(ctx, containers[0].ID)
-	if err != nil {
-		return nil, errors.Wrap(err, "query container data")
-	}
 	resource := otelstorage.Attrs(pcommon.NewMap())
 	{
 		m := resource.AsMap()
-		m.PutStr("container", ctr.Name)
-		m.PutStr("container_name", ctr.Name)
+		var name string
+		if len(ctr.Names) > 0 {
+			name = strings.TrimPrefix(ctr.Names[0], "/")
+		}
+		m.PutStr("container", name)
+		m.PutStr("container_name", name)
 		m.PutStr("container_id", ctr.ID)
-		m.PutStr("image", containers[0].Image)
-		m.PutStr("image_id", containers[0].ImageID)
+		m.PutStr("image", ctr.Image)
+		m.PutStr("image_id", ctr.ImageID)
 	}
 
-	return ParseLog(ctr.LogPath, resource)
+	var since, until string
+	if t := start.AsTime(); !t.IsZero() {
+		since = strconv.FormatInt(t.Unix(), 10)
+	}
+	if t := end.AsTime(); !t.IsZero() {
+		until = strconv.FormatInt(t.Unix(), 10)
+	}
+
+	rc, err := q.client.ContainerLogs(ctx, ctr.ID, container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Since:      since,
+		Until:      until,
+		Timestamps: true,
+		Tail:       "all",
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "query logs")
+	}
+
+	return ParseLog(rc, resource), nil
 }
 
-func matchContainer(ctr types.Container, start, end otelstorage.Timestamp, params logqlengine.SelectLogsParams) bool {
+func matchContainer(ctr types.Container, params logqlengine.SelectLogsParams) (result bool) {
 nextMatcher:
 	for _, matcher := range params.Labels {
 		var value string
@@ -88,6 +111,7 @@ nextMatcher:
 			//
 			// Match at least one.
 			for _, value := range ctr.Names {
+				value = strings.TrimPrefix(value, "/")
 				if match(matcher, value) {
 					continue nextMatcher
 				}
