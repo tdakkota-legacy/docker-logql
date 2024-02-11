@@ -3,8 +3,9 @@ package dockerlog
 import (
 	"container/heap"
 
-	"github.com/tdakkota/docker-logql/internal/logstorage"
 	"go.uber.org/multierr"
+
+	"github.com/tdakkota/docker-logql/internal/logstorage"
 )
 
 type iterHeapElem struct {

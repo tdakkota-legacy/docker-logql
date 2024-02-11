@@ -6,6 +6,7 @@ import (
 	"github.com/docker/cli/cli-plugins/plugin"
 	"github.com/docker/cli/cli/command"
 	"github.com/spf13/cobra"
+
 	"github.com/tdakkota/docker-logql/internal/cliversion"
 )
 

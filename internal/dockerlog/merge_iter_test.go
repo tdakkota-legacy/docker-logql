@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/tdakkota/docker-logql/internal/iterators"
 	"github.com/tdakkota/docker-logql/internal/logstorage"
 	"github.com/tdakkota/docker-logql/internal/otelstorage"
