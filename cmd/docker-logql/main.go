@@ -6,6 +6,7 @@ import (
 	"github.com/docker/cli/cli-plugins/plugin"
 	"github.com/docker/cli/cli/command"
 	"github.com/spf13/cobra"
+	"github.com/tdakkota/docker-logql/internal/cliversion"
 )
 
 func rootCmd(dcli command.Cli) *cobra.Command {
@@ -17,7 +18,15 @@ func rootCmd(dcli command.Cli) *cobra.Command {
 }
 
 func getVersion() string {
-	return "dev"
+	info, _ := cliversion.GetInfo("github.com/tdakkota/docker-logql")
+	switch {
+	case info.Version != "":
+		return info.Version
+	case info.Commit != "":
+		return "dev-" + info.Commit
+	default:
+		return "unknown"
+	}
 }
 
 func main() {
