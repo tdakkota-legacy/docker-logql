@@ -17,3 +17,28 @@ git clone https://github.com/tdakkota/docker-logql
 cd docker-logql
 make install
 ```
+
+## Query logs
+
+```console
+$ docker logql query --help
+
+Usage:  docker logql query <logql>
+
+Examples:
+# Get logs from all containers.
+docker logql query '{}'
+
+# Get logs for last 24h from container "registry" that contains "info".
+docker logql query --since=1d '{container="registry"} |= "info"'
+
+Options:
+      --color                             Enable color (default true)
+  -c, --container                         Show container name (default true)
+      --end lokiapi.LokiTime              End of query range
+      --limit int                         Limit result (default -1)
+      --since start                       A duration used to calculate start relative to `end`
+      --start lokiapi.LokiTime            Start of query range
+      --step lokiapi.PrometheusDuration   Query resolution step
+  -t, --timestamp                         Show timestamps (default true)
+```
