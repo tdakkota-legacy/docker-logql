@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/docker/cli/cli/command"
 	"github.com/mattn/go-isatty"
 	"github.com/pkg/errors"
@@ -33,6 +34,13 @@ func queryCmd(dcli command.Cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:  "query <logql>",
 		Args: cobra.ExactArgs(1),
+		Example: heredoc.Doc(`
+# Get logs from all containers.
+docker logql query '{}'
+
+# Get logs for last 24h from container "registry" that contains "info".
+docker logql query --since=1d '{container="registry"} |= "info"'
+		`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return errors.Errorf("expected 1 args, got %d", len(args))

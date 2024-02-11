@@ -3,6 +3,7 @@ module github.com/tdakkota/docker-logql
 go 1.22.0
 
 require (
+	github.com/MakeNowJust/heredoc/v2 v2.0.1
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/cespare/xxhash/v2 v2.2.0
 	github.com/docker/cli v25.0.3+incompatible
