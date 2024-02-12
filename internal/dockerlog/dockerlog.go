@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
+	apicontainer "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/go-faster/errors"
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -45,22 +45,10 @@ func (q *Querier) Capabilities() (caps logqlengine.QuerierCapabilities) {
 
 // SelectLogs selects log records from storage.
 func (q *Querier) SelectLogs(ctx context.Context, start, end otelstorage.Timestamp, params logqlengine.SelectLogsParams) (_ iterators.Iterator[logstorage.Record], rerr error) {
-	containers, err := q.client.ContainerList(ctx, container.ListOptions{
-		All: true,
-		// TODO(tdakkota): convert select params to label matchers.
-	})
+	containers, err := q.fetchContainers(ctx, params)
 	if err != nil {
-		return nil, errors.Wrap(err, "query container list")
+		return nil, errors.Wrap(err, "fetch containers")
 	}
-
-	n := 0
-	for _, ctr := range containers {
-		if matchContainer(ctr, params) {
-			containers[n] = ctr
-			n++
-		}
-	}
-	containers = containers[:n]
 	switch len(containers) {
 	case 0:
 		return iterators.Empty[logstorage.Record](), nil
@@ -104,21 +92,7 @@ func (q *Querier) SelectLogs(ctx context.Context, start, end otelstorage.Timesta
 	}
 }
 
-func (q *Querier) openLog(ctx context.Context, ctr types.Container, start, end otelstorage.Timestamp) (logiter, error) {
-	resource := otelstorage.Attrs(pcommon.NewMap())
-	{
-		m := resource.AsMap()
-		var name string
-		if len(ctr.Names) > 0 {
-			name = strings.TrimPrefix(ctr.Names[0], "/")
-		}
-		m.PutStr("container", name)
-		m.PutStr("container_name", name)
-		m.PutStr("container_id", ctr.ID)
-		m.PutStr("image", ctr.Image)
-		m.PutStr("image_id", ctr.ImageID)
-	}
-
+func (q *Querier) openLog(ctx context.Context, ctr container, start, end otelstorage.Timestamp) (logiter, error) {
 	var since, until string
 	if t := start.AsTime(); !t.IsZero() {
 		since = strconv.FormatInt(t.Unix(), 10)
@@ -127,7 +101,7 @@ func (q *Querier) openLog(ctx context.Context, ctr types.Container, start, end o
 		until = strconv.FormatInt(t.Unix(), 10)
 	}
 
-	rc, err := q.client.ContainerLogs(ctx, ctr.ID, container.LogsOptions{
+	rc, err := q.client.ContainerLogs(ctx, ctr.ID, apicontainer.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Since:      since,
@@ -138,34 +112,67 @@ func (q *Querier) openLog(ctx context.Context, ctr types.Container, start, end o
 	if err != nil {
 		return nil, errors.Wrap(err, "query logs")
 	}
-	return ParseLog(rc, resource), nil
+	return ParseLog(rc, ctr.labels.AsResource()), nil
 }
 
-func matchContainer(ctr types.Container, params logqlengine.SelectLogsParams) (result bool) {
-nextMatcher:
-	// TODO(tdakkota): support more labels
-	for _, matcher := range params.Labels {
-		var value string
-		switch matcher.Label {
-		case "container", "container_name":
-			// Special case, since container may have multiple names.
-			//
-			// Match at least one.
-			for _, value := range ctr.Names {
-				value = strings.TrimPrefix(value, "/")
-				if match(matcher, value) {
-					continue nextMatcher
-				}
-			}
-			return false
-		case "container_id":
-			value = ctr.ID
-		case "image":
-			value = ctr.Image
-		case "image_id":
-			value = ctr.ImageID
-		default:
-			// Unknown label.
+func (q *Querier) fetchContainers(ctx context.Context, params logqlengine.SelectLogsParams) (r []container, _ error) {
+	containers, err := q.client.ContainerList(ctx, apicontainer.ListOptions{
+		All: true,
+		// TODO(tdakkota): convert select params to label matchers.
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "query container list")
+	}
+
+	for _, ctr := range containers {
+		set := getLabels(ctr)
+		if set.Match(params.Labels) {
+			r = append(r, container{
+				ID:     ctr.ID,
+				labels: set,
+			})
+		}
+	}
+	return r, nil
+}
+
+type container struct {
+	ID     string
+	labels containerLabels
+}
+
+type containerLabels struct {
+	labels map[string]string
+}
+
+func getLabels(ctr types.Container) containerLabels {
+	var name string
+	if len(ctr.Names) > 0 {
+		name = strings.TrimPrefix(ctr.Names[0], "/")
+	}
+	labels := map[string]string{
+		"container":          name,
+		"container_id":       ctr.ID,
+		"container_name":     name,
+		"container_image":    ctr.Image,
+		"container_image_id": ctr.ImageID,
+		"container_command":  ctr.Command,
+		"container_created":  strconv.FormatInt(ctr.Created, 10),
+		"container_state":    ctr.State,
+		"container_status":   ctr.Status,
+	}
+	for label, value := range ctr.Labels {
+		labels[otelstorage.KeyToLabel(label)] = value
+	}
+	return containerLabels{
+		labels: labels,
+	}
+}
+
+func (c containerLabels) Match(matchers []logql.LabelMatcher) bool {
+	for _, matcher := range matchers {
+		value, ok := c.labels[string(matcher.Label)]
+		if !ok {
 			return false
 		}
 		if !match(matcher, value) {
@@ -173,6 +180,14 @@ nextMatcher:
 		}
 	}
 	return true
+}
+
+func (c containerLabels) AsResource() otelstorage.Attrs {
+	attrs := otelstorage.Attrs(pcommon.NewMap())
+	for key, value := range c.labels {
+		attrs.AsMap().PutStr(key, value)
+	}
+	return attrs
 }
 
 func match(m logql.LabelMatcher, s string) bool {
