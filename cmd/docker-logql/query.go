@@ -23,10 +23,10 @@ import (
 
 func queryCmd(dcli command.Cli) *cobra.Command {
 	var (
-		start = apiFlagFor[lokiapi.OptLokiTime]()
-		end   = apiFlagFor[lokiapi.OptLokiTime]()
-		since = apiFlagFor[lokiapi.OptPrometheusDuration]()
-		step  = apiFlagFor[lokiapi.OptPrometheusDuration]()
+		start = apiFlagFor[lokiapi.OptLokiTime]("`end - since`")
+		end   = apiFlagFor[lokiapi.OptLokiTime]("now")
+		since = apiFlagFor[lokiapi.OptPrometheusDuration]("6h")
+		step  = apiFlagFor[lokiapi.OptPrometheusDuration]("")
 		limit int
 
 		render renderOptions

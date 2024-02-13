@@ -21,7 +21,8 @@ type APIFlag[
 	},
 	S ~string,
 ] struct {
-	Val O
+	Val        O
+	DefaultVal S
 }
 
 func apiFlagFor[
@@ -33,10 +34,11 @@ func apiFlagFor[
 		SetTo(S)
 	},
 	S ~string,
-]() APIFlag[P, S] {
+](defaultVal S) APIFlag[P, S] {
 	var zero T
 	return APIFlag[P, S]{
-		Val: &zero,
+		Val:        &zero,
+		DefaultVal: defaultVal,
 	}
 }
 
@@ -44,8 +46,7 @@ var _ pflag.Value = (*APIFlag[*lokiapi.OptLokiTime, lokiapi.LokiTime])(nil)
 
 // String implements [pflag.Value].
 func (f *APIFlag[O, S]) String() string {
-	// TODO: return something useful?
-	return ""
+	return string(f.DefaultVal)
 }
 
 // Set implements [pflag.Value].
