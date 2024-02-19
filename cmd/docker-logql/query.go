@@ -10,8 +10,8 @@ import (
 
 	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/docker/cli/cli/command"
+	"github.com/go-faster/errors"
 	"github.com/mattn/go-isatty"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"go.opentelemetry.io/collector/pdata/pcommon"
