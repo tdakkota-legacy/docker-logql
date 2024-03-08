@@ -7,7 +7,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/cespare/xxhash/v2 v2.2.0
 	github.com/docker/cli v25.0.4+incompatible
-	github.com/docker/docker v25.0.3+incompatible
+	github.com/docker/docker v25.0.4+incompatible
 	github.com/dustin/go-humanize v1.0.1
 	github.com/go-faster/errors v0.7.1
 	github.com/go-faster/jx v1.1.0
