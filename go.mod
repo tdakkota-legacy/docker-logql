@@ -14,7 +14,7 @@ require (
 	github.com/go-logfmt/logfmt v0.6.0
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-isatty v0.0.20
-	github.com/ogen-go/ogen v0.83.0
+	github.com/ogen-go/ogen v1.0.0
 	github.com/prometheus/common v0.50.0
 	github.com/prometheus/prometheus v0.50.1
 	github.com/spf13/cobra v1.8.0
