@@ -27,7 +27,7 @@ require (
 	go.uber.org/multierr v1.11.0
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
 	golang.org/x/exp v0.0.0-20240205201215-2c58cdc269a3
-	golang.org/x/sync v0.6.0
+	golang.org/x/sync v0.7.0
 )
 
 require (
