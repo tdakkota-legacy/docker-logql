@@ -17,6 +17,11 @@ updates:
       golang:
         patterns:
           - "golang.org/x/*"
+      docker:
+        patterns:
+          - "github.com/docker/*"
+          - "github.com/moby/*"
+          - "github.com/distribution/*"
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
