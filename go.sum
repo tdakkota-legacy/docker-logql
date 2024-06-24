@@ -184,8 +184,8 @@ github.com/modern-go/reflect2 v1.0.2/go.mod h1:yWuevngMOJpCy52FWWMvUC8ws7m/LJsjY
 github.com/morikuni/aec v1.0.0 h1:nP9CBfwrvYnBRgY6qfDQkygYDmYwOilePFkwzv4dU8A=
 github.com/morikuni/aec v1.0.0/go.mod h1:BbKIizmSmc5MMPqRYbxO4ZU0S0+P200+tUnFx7PXmsc=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
-github.com/ogen-go/ogen v1.2.1 h1:C5A0lvUMu2wl+eWIxnpXMWnuOJ26a2FyzR1CIC2qG0M=
-github.com/ogen-go/ogen v1.2.1/go.mod h1:P2zQdEu8UqaVRfD5GEFvl+9q63VjMLvDquq1wVbyInM=
+github.com/ogen-go/ogen v1.2.2 h1:fFqZzRacbdnOQeqep4efVeqj7/4hI1mlimrY8rn970A=
+github.com/ogen-go/ogen v1.2.2/go.mod h1:S8X2dBfTKlpy+pcGLXP+aLLzvUAXAvtONtuovrN3+gw=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.12.0/go.mod h1:oUhWkIvk5aDxtKvDDuw8gItl8pKl42LzjC9KZE0HfGg=
 github.com/onsi/gomega v1.7.1/go.mod h1:XdKZgCCFLUoM/7CFJVPcG8C1xQ1AJ0vpAezJrB7JYyY=
